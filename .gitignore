@@ -1,0 +1,7 @@
+﻿node_modules/
+dist/
+coverage/
+.skelograph-cache/
+skelograph-out/
+*.log
+/test

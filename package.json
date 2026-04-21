@@ -1,0 +1,46 @@
+{
+  "name": "skelograph",
+  "version": "0.1.0",
+  "description": "Build a deterministic skeleton graph of a codebase or document folder.",
+  "type": "module",
+  "bin": {
+    "skelograph": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "prepack": "npm run test"
+  },
+  "keywords": [
+    "knowledge-graph",
+    "codebase",
+    "static-analysis",
+    "architecture",
+    "graph"
+  ],
+  "author": "Zubair Safi <zubair@zyrobyte.co>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "^5.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zubairlabs/skelograph.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zubairlabs/skelograph/issues"
+  },
+  "homepage": "https://github.com/zubairlabs/skelograph#readme"
+}

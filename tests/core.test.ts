@@ -426,6 +426,150 @@ test("cargo workspace detection + Rust extraction", async () => {
   }
 });
 
+test("kotlin extractor surfaces composables, types, and resolves jvm imports", async () => {
+  const root = await makeTmp("kotlin");
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "android-demo" }), "utf8");
+    await mkdir(join(root, "app", "ui"), { recursive: true });
+    await mkdir(join(root, "app", "data"), { recursive: true });
+    await writeFile(
+      join(root, "app", "ui", "MainScreen.kt"),
+      [
+        "package com.app.ui",
+        "",
+        "import com.app.data.User",
+        "",
+        "@Composable",
+        "fun MainScreen(user: User) {",
+        "  println(user)",
+        "}",
+        "",
+        "data class HeaderState(val title: String)",
+        "",
+        "object Theme",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      join(root, "app", "data", "User.kt"),
+      ["package com.app.data", "", "data class User(val name: String)", ""].join("\n"),
+      "utf8",
+    );
+
+    const graph = buildGraph(await scan(root));
+    const screenSymbols = graph.fileSymbols["app/ui/MainScreen.kt"] ?? [];
+    const main = screenSymbols.find((s) => s.name === "MainScreen");
+    assert.ok(main, "expected MainScreen symbol");
+    assert.equal(main?.kind, "function");
+    assert.match(main?.doc ?? "", /Composable/);
+
+    const header = screenSymbols.find((s) => s.name === "HeaderState");
+    assert.equal(header?.kind, "class");
+
+    const theme = screenSymbols.find((s) => s.name === "Theme");
+    assert.equal(theme?.kind, "object");
+
+    const importEdge = graph.edges.find(
+      (e) =>
+        e.source === "file:app/ui/MainScreen.kt"
+        && e.target === "file:app/data/User.kt"
+        && e.relation === "imports",
+    );
+    assert.ok(importEdge, "expected jvm import to resolve to file");
+    assert.equal(importEdge?.confidence, "EXTRACTED");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("java extractor captures classes, methods, and resolves imports", async () => {
+  const root = await makeTmp("java");
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "java-demo" }), "utf8");
+    await mkdir(join(root, "src", "com", "app"), { recursive: true });
+    await writeFile(
+      join(root, "src", "com", "app", "Main.java"),
+      [
+        "package com.app;",
+        "",
+        "import com.app.Helper;",
+        "",
+        "public class Main {",
+        "  public static void run() {}",
+        "  private int compute(int x) { return x; }",
+        "}",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      join(root, "src", "com", "app", "Helper.java"),
+      ["package com.app;", "", "public class Helper {}", ""].join("\n"),
+      "utf8",
+    );
+
+    const graph = buildGraph(await scan(root));
+    const mainSymbols = graph.fileSymbols["src/com/app/Main.java"] ?? [];
+    assert.ok(mainSymbols.find((s) => s.name === "Main" && s.kind === "class"));
+    assert.ok(mainSymbols.find((s) => s.name === "Main.run" && s.kind === "method"));
+    assert.ok(
+      graph.edges.some(
+        (e) =>
+          e.source === "file:src/com/app/Main.java"
+          && e.target === "file:src/com/app/Helper.java"
+          && e.relation === "imports",
+      ),
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("swift extractor captures extensions and types", async () => {
+  const root = await makeTmp("swift");
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "ios-demo" }), "utf8");
+    await mkdir(join(root, "App"), { recursive: true });
+    await writeFile(
+      join(root, "App", "Color+Theme.swift"),
+      [
+        "import SwiftUI",
+        "",
+        "extension Color: Hashable {",
+        "  static let brand = Color.red",
+        "  func tinted() -> Color { self }",
+        "}",
+        "",
+        "struct Banner {}",
+        "",
+        "actor Cache {}",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const graph = buildGraph(await scan(root));
+    const symbols = graph.fileSymbols["App/Color+Theme.swift"] ?? [];
+    assert.ok(
+      symbols.find((s) => s.kind === "extension" && s.name === "Color: Hashable"),
+      "expected swift extension with conformance",
+    );
+    assert.ok(symbols.find((s) => s.name === "Banner" && s.kind === "class"));
+    assert.ok(symbols.find((s) => s.name === "Cache" && s.kind === "class"));
+    assert.ok(
+      graph.edges.some(
+        (e) =>
+          e.source === "file:App/Color+Theme.swift"
+          && e.target === "external:SwiftUI"
+          && e.relation === "imports",
+      ),
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("claude install injects hard rules at top and survives re-runs", async () => {
   const root = await makeTmp("claude");
   try {

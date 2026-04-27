@@ -18,12 +18,15 @@ export type Visibility = "public" | "private";
 
 export type SymbolKind =
   | "function"
+  | "method"
   | "class"
   | "const"
   | "variable"
   | "type"
   | "interface"
   | "enum"
+  | "object"
+  | "extension"
   | "default";
 
 export interface GraphNode {

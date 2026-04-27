@@ -17,6 +17,30 @@ import {
   extractRustSymbols,
   isRust,
 } from "./rust_extractors.js";
+import {
+  buildJvmIndex,
+  extractJvmFileDoc,
+  extractJvmImports,
+  extractJvmSymbols,
+  isJvm,
+  type JvmIndex,
+} from "./jvm_extractors.js";
+import {
+  extractSwiftFileDoc,
+  extractSwiftImports,
+  extractSwiftSymbols,
+  isSwift,
+} from "./swift_extractors.js";
+
+const jvmIndexCache = new WeakMap<FileRecord[], JvmIndex>();
+function getJvmIndex(allFiles: FileRecord[]): JvmIndex {
+  let idx = jvmIndexCache.get(allFiles);
+  if (!idx) {
+    idx = buildJvmIndex(allFiles);
+    jvmIndexCache.set(allFiles, idx);
+  }
+  return idx;
+}
 
 const JS_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
 
@@ -77,6 +101,8 @@ export function isJavaScriptLike(file: FileRecord): boolean {
 
 export function extractFileDoc(file: FileRecord): string | undefined {
   if (isRust(file)) return extractRustFileDoc(file);
+  if (isJvm(file)) return extractJvmFileDoc(file);
+  if (isSwift(file)) return extractSwiftFileDoc(file);
   if (!isJavaScriptLike(file) && file.extension !== ".svelte") return undefined;
   const content = file.content.trimStart();
 
@@ -98,6 +124,8 @@ export function extractFileDoc(file: FileRecord): string | undefined {
 
 export function extractSymbols(file: FileRecord): SkelSymbol[] {
   if (isRust(file)) return extractRustSymbols(file);
+  if (isJvm(file)) return extractJvmSymbols(file);
+  if (isSwift(file)) return extractSwiftSymbols(file);
   if (!isJavaScriptLike(file) && file.extension !== ".svelte") return [];
 
   const content = file.extension === ".svelte" ? extractSvelteScript(file.content) : file.content;
@@ -231,6 +259,12 @@ export function extractImports(file: FileRecord, allFiles: FileRecord[], workspa
     if (!workspace) return [];
     const allRelative = new Set(allFiles.map((f) => f.relativePath));
     return extractRustImports(file, workspace, allRelative);
+  }
+  if (isJvm(file)) {
+    return extractJvmImports(file, getJvmIndex(allFiles));
+  }
+  if (isSwift(file)) {
+    return extractSwiftImports(file);
   }
   if (!isJavaScriptLike(file) && file.extension !== ".svelte") return [];
 

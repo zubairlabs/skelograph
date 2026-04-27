@@ -16,6 +16,10 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   ".svelte": "svelte",
   ".vue": "vue",
   ".rs": "rust",
+  ".kt": "kotlin",
+  ".kts": "kotlin",
+  ".java": "java",
+  ".swift": "swift",
   ".md": "markdown",
   ".mdx": "markdown",
 };

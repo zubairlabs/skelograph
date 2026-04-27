@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { isIgnored, parseIgnoreRule } from "../src/ignore.js";
 import { scan } from "../src/scanner.js";
@@ -196,7 +196,7 @@ test("buildSkelograph writes .claude/ structure and preserves user-edited flow n
     assert.match(claudeMd, /ALWAYS:/);
     assert.match(claudeMd, /NEVER:/);
 
-    const flowFiles = first.written.filter((p) => p.includes(`${join(".claude", "FLOWS")}/`));
+    const flowFiles = first.written.filter((p) => p.includes(`${join(".claude", "FLOWS")}${sep}`));
     assert.ok(flowFiles.length > 0);
     const flowPath = flowFiles[0];
     const flowContent = await readFile(flowPath, "utf8");
